@@ -175,7 +175,7 @@
 
   <iframe
     id="browser-frame"
-    src="https://pulse4web.github.io/pulse-browser//start.html"
+    srcdoc="<h2 style='text-align:center;margin-top:2rem;'>Welcome to Pulse Browser</h2>"
     sandbox="allow-scripts allow-same-origin allow-forms"
   ></iframe>
 
@@ -198,12 +198,15 @@
     const convertBtn = document.getElementById('convert-btn');
     const jsonOutput = document.getElementById('json-output');
 
+    // Replace this with your actual Supabase Edge Function URL
+    const SUPABASE_FUNCTION_URL = 'https://higqozvdbweddsycoyzk.supabase.co/functions/v1/fetch-site';
+
     // Generate unique tab ID
     function generateTabId() {
       return '_' + Math.random().toString(36).substr(2, 9);
     }
 
-    function createTab(url = '/start.html') {
+    function createTab(url = 'https://pulse4web.github.io/pulse-browser//start.html') {
       const id = generateTabId();
       const tab = {
         id,
@@ -235,14 +238,60 @@
       }
     }
 
+    async function fetchHTMLviaSupabase(url) {
+      const res = await fetch(SUPABASE_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch site via Supabase proxy');
+      return await res.text();
+    }
+
+    async function loadURL(url) {
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+      const tab = tabs.find(t => t.id === activeTabId);
+      if (!tab) return;
+
+      if (tab.historyIndex < tab.history.length - 1) {
+        tab.history = tab.history.slice(0, tab.historyIndex + 1);
+      }
+
+      tab.history.push(url);
+      tab.historyIndex++;
+      tab.url = url;
+
+      // Fetch HTML from Supabase proxy and set iframe srcdoc
+      try {
+        goBtn.disabled = true;
+        goBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading';
+
+        const html = await fetchHTMLviaSupabase(url);
+        iframe.srcdoc = html;
+      } catch (e) {
+        iframe.srcdoc = `<h2 style="color:red; text-align:center; margin-top:2rem;">Error loading page</h2><p style="text-align:center;">${e.message}</p>`;
+      } finally {
+        goBtn.disabled = false;
+        goBtn.innerHTML = '<i class="fa-solid fa-rocket"></i>';
+      }
+
+      urlInput.value = url;
+      updateNavButtons(tab);
+      renderTabs();
+      jsonOutput.style.display = 'none';
+      jsonOutput.textContent = '';
+    }
+
     function setActiveTab(id) {
       activeTabId = id;
       const tab = tabs.find(t => t.id === id);
       if (!tab) return;
 
-      iframe.src = tab.history[tab.historyIndex];
-      urlInput.value = tab.history[tab.historyIndex];
-      updateNavButtons(tab);
+      // Load page for active tab
+      loadURL(tab.history[tab.historyIndex]);
       renderTabs();
       jsonOutput.style.display = 'none';
       jsonOutput.textContent = '';
@@ -278,37 +327,13 @@
       newTabBtn.id = 'new-tab-btn';
       newTabBtn.title = 'New Tab';
       newTabBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
-      newTabBtn.onclick = () => createTab('/start.html');
+      newTabBtn.onclick = () => createTab('https://pulse4web.github.io/pulse-browser/start.html');
       tabsBar.appendChild(newTabBtn);
     }
 
     function updateNavButtons(tab) {
       backBtn.disabled = tab.historyIndex <= 0;
       forwardBtn.disabled = tab.historyIndex >= tab.history.length - 1;
-    }
-
-    function loadURL(url) {
-      if (!url) return;
-      if (!/^https?:\/\//i.test(url)) {
-        url = 'https://' + url;
-      }
-      const tab = tabs.find(t => t.id === activeTabId);
-      if (!tab) return;
-
-      if (tab.historyIndex < tab.history.length - 1) {
-        tab.history = tab.history.slice(0, tab.historyIndex + 1);
-      }
-
-      tab.history.push(url);
-      tab.historyIndex++;
-      tab.url = url;
-
-      iframe.src = url;
-      urlInput.value = url;
-      updateNavButtons(tab);
-      renderTabs();
-      jsonOutput.style.display = 'none';
-      jsonOutput.textContent = '';
     }
 
     goBtn.addEventListener('click', () => {
@@ -325,35 +350,23 @@
       const tab = tabs.find(t => t.id === activeTabId);
       if (!tab || tab.historyIndex === 0) return;
       tab.historyIndex--;
-      iframe.src = tab.history[tab.historyIndex];
-      urlInput.value = tab.history[tab.historyIndex];
-      updateNavButtons(tab);
-      renderTabs();
-      jsonOutput.style.display = 'none';
-      jsonOutput.textContent = '';
+      loadURL(tab.history[tab.historyIndex]);
     });
 
     forwardBtn.addEventListener('click', () => {
       const tab = tabs.find(t => t.id === activeTabId);
       if (!tab || tab.historyIndex >= tab.history.length - 1) return;
       tab.historyIndex++;
-      iframe.src = tab.history[tab.historyIndex];
-      urlInput.value = tab.history[tab.historyIndex];
-      updateNavButtons(tab);
-      renderTabs();
-      jsonOutput.style.display = 'none';
-      jsonOutput.textContent = '';
+      loadURL(tab.history[tab.historyIndex]);
     });
 
     reloadBtn.addEventListener('click', () => {
       const tab = tabs.find(t => t.id === activeTabId);
       if (!tab) return;
-      iframe.src = tab.history[tab.historyIndex];
-      jsonOutput.style.display = 'none';
-      jsonOutput.textContent = '';
+      loadURL(tab.history[tab.historyIndex]);
     });
 
-    // Fetch raw HTML with CORS proxy
+    // Fetch raw HTML with CORS proxy (old method, kept for JSON conversion)
     async function fetchRawHTML(url) {
       const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(url);
       const response = await fetch(proxyUrl);
@@ -394,7 +407,8 @@
       jsonOutput.textContent = '';
 
       try {
-        const rawHTML = await fetchRawHTML(tab.history[tab.historyIndex]);
+        // Use the Supabase proxy to get raw HTML instead of allorigins (optional)
+        const rawHTML = await fetchHTMLviaSupabase(tab.history[tab.historyIndex]);
         if (!rawHTML.trim()) throw new Error('Empty HTML fetched from proxy');
 
         const jsonResult = await convertHTMLtoJSON(rawHTML);
@@ -411,7 +425,7 @@
     });
 
     window.onload = () => {
-      createTab('/start.html');
+      createTab('https://pulse4web.github.io/pulse-browser/start.html');
     };
   </script>
 </body>

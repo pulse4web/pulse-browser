@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pulse Start</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  <style>
+    body {
+      margin: 0;
+      background: #121212;
+      color: #eee;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      padding: 1rem;
+    }
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 0.25rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #e16033; /* Accent color updated */
+    }
+    .search-container {
+      margin: 2rem 0;
+      width: 100%;
+      max-width: 600px;
+      display: flex;
+      gap: 0.5rem;
+    }
+    input[type="text"] {
+      flex-grow: 1;
+      padding: 0.75rem 1rem;
+      font-size: 1.2rem;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+      background: #2a2a2a;
+      color: #eee;
+      transition: background 0.2s;
+    }
+    input[type="text"]:focus {
+      background: #3c3c3c;
+    }
+    button {
+      background: #e16033; /* Accent color updated */
+      border: none;
+      color: white;
+      font-weight: 600;
+      font-size: 1.3rem;
+      padding: 0 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #c95227; /* Slightly darker accent on hover */
+    }
+    .quick-links {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 600px;
+      margin-top: 3rem;
+    }
+    .quick-link {
+      background: #2a2a2a;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      text-decoration: none;
+      color: #eee;
+      font-weight: 600;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s, color 0.2s;
+    }
+    .quick-link:hover {
+      background: #3c3c3c;
+      color: #e16033; /* Accent on hover text */
+    }
+    .quick-link i {
+      font-size: 1.3rem;
+    }
+  </style>
+</head>
+<body>
+
+
+ <img src="/uploads/download.png" alt="Pulse Logo" style="width: 150px; height: auto; margin-bottom: 1rem;"> 
+
+  <form
+    id="search-form"
+    class="search-container"
+    onsubmit="event.preventDefault(); doSearch();"
+  >
+    <input
+      id="search-input"
+      type="text"
+      placeholder="Search Google or type a URL"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <button type="submit" aria-label="Search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+    </button>
+  </form>
+
+  <div class="quick-links">
+    <a href="https://github.com/starship-site" class="quick-link" target="_blank" rel="noopener noreferrer">
+      <i class="fa-brands fa-github"></i> GitHub
+    </a>
+    <a href="https://news.ycombinator.com" class="quick-link" target="_blank" rel="noopener noreferrer">
+      <i class="fa-solid fa-bolt"></i> Hacker News
+    </a>
+    <a href="https://twitter.com" class="quick-link" target="_blank" rel="noopener noreferrer">
+      <i class="fa-brands fa-twitter"></i> Twitter
+    </a>
+    <a href="https://youtube.com" class="quick-link" target="_blank" rel="noopener noreferrer">
+      <i class="fa-brands fa-youtube"></i> YouTube
+    </a>
+  </div>
+
+  <script>
+    function doSearch() {
+      const input = document.getElementById('search-input').value.trim();
+      if (!input) return;
+
+      // Check if input looks like a URL (simple check)
+      const isURL = /^(https?:\/\/|www\.)/i.test(input) || input.includes('.');
+      let urlToLoad;
+
+      if (isURL) {
+        // Add https:// if missing
+        if (!/^https?:\/\//i.test(input)) {
+          urlToLoad = 'https://' + input;
+        } else {
+          urlToLoad = input;
+        }
+        window.location.href = urlToLoad;
+      } else {
+        // Search Google
+        const query = encodeURIComponent(input);
+        window.location.href = `https://www.google.com/search?q=${query}`;
+      }
+    }
+  </script>
+</body>
+</html>
